@@ -29,7 +29,7 @@ API REST de alta concurrencia para procesamiento de pedidos, desarrollada con Sp
 
 #### Procesar Pedido (Síncrono)
 ```
-POST /api/v1/processOrder
+POST /processOrder
 Content-Type: application/json
 
 {
@@ -55,17 +55,17 @@ Content-Type: application/json
 
 #### Procesar Pedido (Asíncrono)
 ```
-POST /api/v1/processOrder/async
+POST /processOrder/async
 ```
 
 #### Consultar Estado
 ```
-GET /api/v1/orders/{orderId}
+GET /orders/{orderId}
 ```
 
 #### Estadísticas del Sistema
 ```
-GET /api/v1/statistics
+GET /statistics
 ```
 
 ## Configuración
@@ -102,8 +102,11 @@ docker run -p 8080:8080 order-processing-api
 # Unitarios + integración
 mvn test
 
-# Solo load test (1000 requests concurrentes)
+# Load test (1000 requests concurrentes)
 mvn test -Dtest=HighLoadConcurrencyTest
+
+# Stress test (5000 requests - comportamiento bajo sobrecarga)
+mvn test -Dtest=OverloadStressTest
 ```
 
 ## Endpoints
