@@ -89,6 +89,17 @@ app.order.max-concurrent-per-customer=5
 - Maven 3.8+
 - Docker (opcional)
 
+> **Importante:** Maven debe usar JDK 17+ (no JRE, no JDK 8).
+> Verificar con `mvn -version` que muestre `Java version: 17` o superior.
+> Si muestra una versión anterior, configurar `JAVA_HOME` antes de ejecutar:
+> ```bash
+> # Linux / macOS
+> export JAVA_HOME=/path/to/jdk-21
+> # Windows (PowerShell)
+> $env:JAVA_HOME="C:\Program Files\Java\jdk-21"
+> $env:Path="$env:JAVA_HOME\bin;$env:Path"
+> ```
+
 ## Ejecución
 
 ### Local con Maven
