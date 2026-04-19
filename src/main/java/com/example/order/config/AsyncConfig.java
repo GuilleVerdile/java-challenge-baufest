@@ -6,9 +6,28 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import java.util.concurrent.Executor;
-import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.ThreadPoolExecutor;
 
+/**
+ * Configures the dedicated thread pool used for asynchronous order processing.
+ *
+ * <p><b>Why a separate executor?</b><br>
+ * Spring Boot's default task executor is shared by all {@code @Async} tasks. Using a
+ * dedicated pool (named {@code orderTaskExecutor}) isolates order processing threads
+ * from other application tasks and allows independent tuning.</p>
+ *
+ * <p><b>Pool sizing rationale (Little's Law):</b><br>
+ * {@code threads ≈ target_RPS × avg_latency_seconds}<br>
+ * For 200 RPS and ~300ms average latency: 200 × 0.3 = 60 threads needed at steady state.
+ * Max is set to 100 to absorb bursts, and the queue to 500 to buffer spikes.</p>
+ *
+ * <p><b>{@code CallerRunsPolicy}</b>: when both the pool and queue are saturated, the
+ * thread that submitted the task executes it inline. This creates natural backpressure:
+ * the HTTP thread slows down, preventing request loss while signaling overload to clients.</p>
+ *
+ * <p>{@code setWaitForTasksToCompleteOnShutdown(true)} ensures in-flight orders finish
+ * gracefully during application shutdown (e.g. rolling deployments).</p>
+ */
 @Configuration
 public class AsyncConfig {
 
