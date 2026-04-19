@@ -10,32 +10,72 @@
 
 ## Metodología
 
-Se ejecutó `HighLoadConcurrencyTest` que dispara **1000 pedidos concurrentes** desde
-un pool de 200 clientes simultáneos con `CountDownLatch` para sincronizar el inicio
-y maximizar la contención.
+Se ejecutaron dos suites de prueba:
+
+- **`HighLoadConcurrencyTest`**: 1000 pedidos concurrentes desde 200 clientes virtuales. Valida el cumplimiento de la consigna.
+- **`OverloadStressTest`**: 5000 pedidos concurrentes desde 500 clientes virtuales. Valida comportamiento bajo sobrecarga extrema.
+
+Ambas usan `CountDownLatch` para sincronizar el inicio de todos los threads y maximizar la contención.
 
 Métricas capturadas por solicitud:
 - Latencia individual (tiempo desde envío hasta respuesta)
 - Throughput (req/s)
 - Percentiles p50, p95, p99, max
 - Tasa de éxito vs fallo
-- Consistencia de datos (pérdida cero)
+- Consistencia de datos (éxito + fallidos = total, pérdida cero)
 
-## Resultados Observados (referencia)
+## Resultados — Load Test (1000 pedidos concurrentes)
 
-| Métrica | Valor típico |
+> `HighLoadConcurrencyTest` · 200 clientes virtuales · Hardware: Windows 11, JDK 21, i-series CPU
+
+| Métrica | Valor |
 |---|---|
-| Total procesadas | 1000 / 1000 (0 pérdidas) |
-| Throughput | ~180-250 req/s |
-| Latencia promedio | ~900-1200 ms |
-| Latencia p50 | ~800 ms |
-| Latencia p95 | ~1800 ms |
-| Latencia p99 | ~2500 ms |
-| CPU | 60-85% |
-| Heap | < 512 MB |
+| Total solicitudes | 1000 |
+| Exitosas (stock disponible) | 500 |
+| Fallidas (inventario agotado) | 500 |
+| Pérdida de datos | **0** |
+| Tiempo total (wall time) | 2091 ms |
+| Throughput | **478 req/s** |
+| Latencia promedio | 352 ms |
+| Latencia p50 | 310 ms |
+| Latencia p95 | 886 ms |
+| Latencia p99 | 1009 ms |
+| Latencia máxima | 1067 ms |
 
-> Nota: los valores reales dependen del hardware. Los números están dominados por
-> `Thread.sleep(100-500ms)` que simula la operación de negocio.
+> Los pedidos "fallidos" son rechazos legítimos por inventario insuficiente, **no errores de concurrencia**.
+> El invariante `éxito + fallidos = 1000` se cumple: cero pérdidas de datos.
+
+## Resultados — Stress Test (5000 pedidos concurrentes)
+
+> `OverloadStressTest` · 500 clientes virtuales · misma máquina
+
+| Métrica | Valor |
+|---|---|
+| Total solicitudes | 5000 |
+| Exitosas | 500 |
+| Fallidas (rechazadas por backpressure/inventario) | 4500 |
+| Pérdida de datos | **0** |
+| Tiempo total (wall time) | 1046 ms |
+| Throughput | **4780 req/s** |
+| Latencia promedio | 73 ms |
+| Latencia p50 | 0 ms (rechazo inmediato) |
+| Latencia p95 | 522 ms |
+| Latencia p99 | 820 ms |
+| Latencia máxima | 1037 ms |
+
+> El alto throughput en el stress test se explica porque la mayoría de los pedidos son
+> rechazados rápidamente (inventario agotado o semáforo de cliente lleno) sin incurrir
+> en el delay simulado de 100-500ms. Esto demuestra que el sistema **degrada graciosamente**
+> bajo sobrecarga: responde rápido en lugar de colapsar.
+
+## Comparativa entre escenarios
+
+| Escenario | Pedidos | Clientes | Throughput | p99 | Pérdidas |
+|-----------|---------|----------|------------|-----|----------|
+| Load test | 1000 | 200 | 478 req/s | 1009 ms | **0** |
+| Stress test | 5000 | 500 | 4780 req/s | 820 ms | **0** |
+
+> Nota: latencias dominadas por `Thread.sleep(100-500ms)` que simula la operación de negocio.
 
 ## Tuning del Thread Pool
 
@@ -102,8 +142,14 @@ Permite no bloquear el thread HTTP en el endpoint `/processOrder/async`.
 ## Cómo Reproducir
 
 ```bash
-# Ejecutar load test
+# Load test (1000 pedidos concurrentes)
 mvn test -Dtest=HighLoadConcurrencyTest
+
+# Stress test (5000 pedidos concurrentes)
+mvn test -Dtest=OverloadStressTest
+
+# Todos los tests
+mvn test
 
 # Arrancar la app
 mvn spring-boot:run
@@ -112,6 +158,6 @@ mvn spring-boot:run
 $body = '{"orderId":"O1","customerId":"C1","orderAmount":100,"orderItems":[{"productId":"PROD-001","productName":"A","quantity":2,"unitPrice":50}]}'
 Invoke-RestMethod -Uri http://localhost:8080/processOrder -Method Post -Body $body -ContentType 'application/json'
 
-# Ver estadísticas
+# Ver estadísticas del sistema
 Invoke-RestMethod http://localhost:8080/statistics
 ```
