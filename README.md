@@ -83,13 +83,25 @@ app.order.processing-timeout-ms=5000
 app.order.max-concurrent-per-customer=5
 ```
 
+## Prerequisitos
+
+- Java 17 o superior (probado con JDK 21)
+- Maven 3.8+
+- Docker (opcional)
+
 ## Ejecución
 
 ### Local con Maven
 ```bash
-mvn clean package
+# Compilar y ejecutar
 mvn spring-boot:run
+
+# O bien: compilar el JAR y ejecutarlo directamente
+mvn clean package -DskipTests
+java -jar target/java-challenge-baufest-1.0.0.jar
 ```
+
+La API queda disponible en `http://localhost:8080`.
 
 ### Docker
 ```bash
@@ -99,13 +111,16 @@ docker run -p 8080:8080 order-processing-api
 
 ### Tests
 ```bash
-# Unitarios + integración
+# Todos los tests (unitarios + integración + load + stress)
 mvn test
 
-# Load test (1000 requests concurrentes)
+# Solo unitarios e integración (rápido, ~10s)
+mvn test -Dtest="OrderProcessingServiceTest,OrderControllerConcurrencyTest"
+
+# Load test (1000 requests concurrentes, ~3s)
 mvn test -Dtest=HighLoadConcurrencyTest
 
-# Stress test (5000 requests - comportamiento bajo sobrecarga)
+# Stress test (5000 requests concurrentes, ~2s)
 mvn test -Dtest=OverloadStressTest
 ```
 
