@@ -1,0 +1,20 @@
+target/
+*.class
+*.jar
+*.war
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+HELP.md
+.mvn/
+mvnw
+mvnw.cmd
+logs/
+*.log
+
+# Archivo personal - no subir al repo
+INTERVIEW_GUIDE.md
+
